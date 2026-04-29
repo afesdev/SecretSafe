@@ -1,0 +1,81 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "SecretSafe",
+  "version": "0.1.0",
+  "identifier": "com.afesdev.secretsafe",
+  "build": {
+    "beforeDevCommand": "bun run frontend:dev",
+    "devUrl": "http://localhost:1430",
+    "beforeBuildCommand": "bun run build",
+    "frontendDist": "../dist/public"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "title": "SecretSafe",
+        "width": 1180,
+        "height": 760,
+        "minWidth": 360,
+        "minHeight": 560
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis", "msi"],
+    "publisher": "AfesDev",
+    "category": "Utility",
+    "shortDescription": "Gestor de contraseñas local y cifrado para escritorio.",
+    "longDescription": "SecretSafe es un gestor de contraseñas local-first que protege tus credenciales con cifrado robusto, auditoría de seguridad, importación/exportación avanzada y autocompletado mediante extensión con bridge local.",
+    "copyright": "© AfesDev - Colombia",
+    "license": "Proprietary",
+    "windows": {
+      "allowDowngrades": false,
+      "webviewInstallMode": {
+        "type": "embedBootstrapper",
+        "silent": true
+      },
+      "wix": {
+        "upgradeCode": "ab50b689-034c-4bbc-9209-29a7e00721fd",
+        "language": ["es-ES"],
+        "bannerPath": "icons/installer/wix-banner.bmp",
+        "dialogImagePath": "icons/installer/wix-dialog.bmp",
+        "fipsCompliant": false
+      },
+      "nsis": {
+        "installerIcon": "icons/icon.ico",
+        "headerImage": "icons/installer/nsis-header.bmp",
+        "sidebarImage": "icons/installer/nsis-sidebar.bmp",
+        "installMode": "currentUser",
+        "languages": ["Spanish"],
+        "displayLanguageSelector": false,
+        "compression": "lzma",
+        "minimumWebview2Version": "109.0.1518.78"
+      }
+    },
+    "fileAssociations": [
+      {
+        "ext": ["vault"],
+        "name": "SecretSafe Vault",
+        "description": "Bóveda cifrada de SecretSafe",
+        "mimeType": "application/x-secretsafe-vault",
+        "role": "Editor"
+      }
+    ],
+    "icon": [
+      "icons/logox16.png",
+      "icons/logox32.png",
+      "icons/logox48.png",
+      "icons/logox64.png",
+      "icons/logox128.png",
+      "icons/logox256.png",
+      "icons/logox512.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  }
+}

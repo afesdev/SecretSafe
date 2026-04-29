@@ -1,0 +1,17 @@
+{
+  "scripts": {
+    "dev": "cargo tauri dev",
+    "frontend:dev": "concurrently -k -n tailwind,dioxus \"bun run tailwind:dev\" \"dx serve --port 1430\"",
+    "build": "bun run tailwind:build && dx bundle --release --debug-symbols false",
+    "installer:assets": "powershell -ExecutionPolicy Bypass -File ./src-tauri/scripts/generate-installer-assets.ps1",
+    "installer:release": "powershell -ExecutionPolicy Bypass -File ./src-tauri/scripts/build-installers.ps1",
+    "tailwind:dev": "tailwindcss -i ./assets/tailwind.css -o ./assets/styles.css --watch",
+    "tailwind:build": "tailwindcss -i ./assets/tailwind.css -o ./assets/styles.css --minify"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.2.4",
+    "concurrently": "^9.2.1",
+    "tailwindcss": "^4.2.4"
+  }
+}

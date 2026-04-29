@@ -1,0 +1,42 @@
+[package]
+name = "secretsafe"
+version = "0.1.0"
+description = "A Tauri App"
+authors = ["you"]
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+# The `_lib` suffix may seem redundant but it is necessary
+# to make the lib name unique and wouldn't conflict with the bin name.
+# This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
+name = "secretsafe_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"
+tauri-plugin-clipboard-manager = "2"
+tauri-plugin-dialog = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+base64 = "0.22.1"
+argon2 = "0.5.3"
+chacha20poly1305 = "0.10.1"
+rand_core = "0.10.1"
+zeroize = "1.8.2"
+time = { version = "0.3.47", features = ["serde"] }
+uuid = { version = "1.23.1", features = ["serde", "v4"] }
+thiserror = "2.0.18"
+serde_bytes = "0.11.19"
+keepass = "0.12.1"
+tiny_http = "0.12.0"
+csv = "1.4.0"
+zip = "2.2.0"
+windows-sys = { version = "0.59.0", features = ["Win32_Security_Cryptography", "Win32_System_Memory"] }
+windows = { version = "0.58.0", features = ["Security_Credentials_UI"] }
+
