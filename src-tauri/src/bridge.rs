@@ -6,10 +6,13 @@ use serde::{Deserialize, Serialize};
 use tiny_http::{Header, Method, Response, Server, StatusCode};
 use uuid::Uuid;
 
-use crate::{models::BridgePairPin, vault};
+use crate::{
+    models::{BridgePairPin, SecretEntryInput},
+    vault,
+};
 
 const BRIDGE_ADDR: &str = "127.0.0.1:47635";
-const PAIR_PIN_TTL_MINUTES: i64 = 5;
+const PAIR_PIN_TTL_MINUTES: i64 = 180;
 const BRIDGE_TOKEN_TTL_MINUTES: i64 = 30;
 
 #[derive(Clone)]
@@ -42,6 +45,18 @@ struct FillRequest {
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
+struct SaveRequest {
+    token: String,
+    title: String,
+    username: String,
+    password: String,
+    url: String,
+    notes: Option<String>,
+    group: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct PairVerifyRequest {
     pin: String,
 }
@@ -68,6 +83,18 @@ struct BridgeEntry {
 struct FillResponse {
     username: String,
     password: String,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SaveResponse {
+    id: String,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct VaultMetaResponse {
+    groups: Vec<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -110,6 +137,14 @@ pub fn start() {
                     Ok(payload) => handle_fill(payload),
                     Err(error) => json_bad_request(error),
                 },
+                (Method::Post, "/vault/save") => match read_json::<SaveRequest>(&mut request) {
+                    Ok(payload) => handle_save(payload),
+                    Err(error) => json_bad_request(error),
+                },
+                (Method::Post, "/vault/meta") => match read_json::<SearchRequest>(&mut request) {
+                    Ok(payload) => handle_meta(payload),
+                    Err(error) => json_bad_request(error),
+                },
                 _ => json_not_found("Ruta no soportada"),
             };
 
@@ -137,13 +172,26 @@ pub fn clear_active_session() {
 
 pub fn create_pair_pin() -> BridgePairPin {
     let now = now_unix();
-    let pin = format!("{:06}", (Uuid::new_v4().as_u128() % 1_000_000) as u32);
-    let expires_at_unix = now + time::Duration::minutes(PAIR_PIN_TTL_MINUTES).whole_seconds();
-
     if let Ok(mut state) = bridge_state().lock() {
+        if let Some((pin, expires_at_unix)) = state.pair_pin.clone() {
+            if now <= expires_at_unix {
+                return BridgePairPin {
+                    pin,
+                    expires_at_unix,
+                };
+            }
+        }
+        let pin = format!("{:06}", (Uuid::new_v4().as_u128() % 1_000_000) as u32);
+        let expires_at_unix = now + time::Duration::minutes(PAIR_PIN_TTL_MINUTES).whole_seconds();
         state.pair_pin = Some((pin.clone(), expires_at_unix));
+        return BridgePairPin {
+            pin,
+            expires_at_unix,
+        };
     }
 
+    let pin = format!("{:06}", (Uuid::new_v4().as_u128() % 1_000_000) as u32);
+    let expires_at_unix = now + time::Duration::minutes(PAIR_PIN_TTL_MINUTES).whole_seconds();
     BridgePairPin {
         pin,
         expires_at_unix,
@@ -179,7 +227,6 @@ fn handle_pair_verify(payload: PairVerifyRequest) -> Response<std::io::Cursor<Ve
     state
         .active_tokens
         .insert(bridge_token.clone(), token_expires);
-    state.pair_pin = None;
 
     json_ok(
         serde_json::to_value(PairVerifyResponse {
@@ -246,6 +293,82 @@ fn handle_fill(payload: FillRequest) -> Response<std::io::Cursor<Vec<u8>>> {
                 ),
             )
         }
+        Err(error) => json_bad_request(error.to_string()),
+    }
+}
+
+fn handle_save(payload: SaveRequest) -> Response<std::io::Cursor<Vec<u8>>> {
+    let Some(app_session) = require_valid_token(&payload.token) else {
+        return json_unauthorized("Sesión de extensión no válida");
+    };
+    if payload.title.trim().is_empty() {
+        return json_bad_request("El titulo es obligatorio".to_string());
+    }
+    if payload.password.is_empty() {
+        return json_bad_request("La contraseña es obligatoria".to_string());
+    }
+
+    let existing = match vault::unlock_vault(&app_session.vault_path, &app_session.master_password) {
+        Ok(vault) => vault.entries,
+        Err(error) => return json_bad_request(error.to_string()),
+    };
+    let normalized_url = payload.url.trim().to_lowercase();
+    let normalized_user = payload.username.trim().to_lowercase();
+    if !normalized_url.is_empty()
+        && existing.iter().any(|item| {
+            item.url.trim().to_lowercase() == normalized_url
+                && item.username.trim().to_lowercase() == normalized_user
+        })
+    {
+        return json_bad_request(
+            "Ya existe un secreto con la misma URL y usuario. Evitamos duplicados.".to_string(),
+        );
+    }
+
+    let entry = SecretEntryInput {
+        title: payload.title.trim().to_string(),
+        username: payload.username.trim().to_string(),
+        password: payload.password,
+        url: payload.url.trim().to_string(),
+        notes: payload.notes.unwrap_or_default().trim().to_string(),
+        group: payload.group.unwrap_or_else(|| "General".to_string()),
+        icon: "auto".to_string(),
+        color: "#6366F1".to_string(),
+        custom_fields: Vec::new(),
+    };
+
+    match vault::add_entry(
+        &app_session.vault_path,
+        &app_session.master_password,
+        entry,
+    ) {
+        Ok(updated) => {
+            let id = updated
+                .entries
+                .last()
+                .map(|item| item.id.to_string())
+                .unwrap_or_default();
+            json_ok(
+                serde_json::to_value(SaveResponse { id }).unwrap_or_else(
+                    |_| serde_json::json!({ "error": "No se pudo serializar respuesta" }),
+                ),
+            )
+        }
+        Err(error) => json_bad_request(error.to_string()),
+    }
+}
+
+fn handle_meta(payload: SearchRequest) -> Response<std::io::Cursor<Vec<u8>>> {
+    let Some(app_session) = require_valid_token(&payload.token) else {
+        return json_unauthorized("Sesión de extensión no válida");
+    };
+    match vault::unlock_vault(&app_session.vault_path, &app_session.master_password) {
+        Ok(vault) => json_ok(
+            serde_json::to_value(VaultMetaResponse {
+                groups: vault.groups,
+            })
+            .unwrap_or_else(|_| serde_json::json!({ "groups": ["General"] })),
+        ),
         Err(error) => json_bad_request(error.to_string()),
     }
 }

@@ -2715,19 +2715,19 @@ fn SettingsModal(
     let mut saving_recovery = use_signal(|| false);
     let mut changing_master_password = use_signal(|| false);
     let tab_bar = if is_dark_mode {
-        "-mx-5 sm:-mx-6 mb-5 flex overflow-x-hidden border-b border-white/[0.07] px-5 sm:px-6"
+        "-mx-5 sm:-mx-6 mb-5 grid grid-cols-3 border-b border-white/[0.07] px-5 sm:px-6"
     } else {
-        "-mx-5 sm:-mx-6 mb-5 flex overflow-x-hidden border-b border-vault-100 px-5 sm:px-6"
+        "-mx-5 sm:-mx-6 mb-5 grid grid-cols-3 border-b border-vault-100 px-5 sm:px-6"
     };
     let tab_inactive = if is_dark_mode {
-        "-mb-px border-b-2 border-transparent px-4 py-2.5 text-xs font-medium text-vault-400 transition hover:border-white/20 hover:text-white"
+        "-mb-px w-full border-b-2 border-transparent px-3 py-2.5 text-center text-xs font-medium text-vault-400 transition hover:border-white/20 hover:text-white"
     } else {
-        "-mb-px border-b-2 border-transparent px-4 py-2.5 text-xs font-medium text-vault-500 transition hover:border-vault-300 hover:text-vault-950"
+        "-mb-px w-full border-b-2 border-transparent px-3 py-2.5 text-center text-xs font-medium text-vault-500 transition hover:border-vault-300 hover:text-vault-950"
     };
     let tab_active = if is_dark_mode {
-        "-mb-px border-b-2 border-brand-400 px-4 py-2.5 text-xs font-semibold text-white"
+        "-mb-px w-full border-b-2 border-brand-400 px-3 py-2.5 text-center text-xs font-semibold text-white"
     } else {
-        "-mb-px border-b-2 border-brand-500 px-4 py-2.5 text-xs font-semibold text-vault-950"
+        "-mb-px w-full border-b-2 border-brand-500 px-3 py-2.5 text-center text-xs font-semibold text-vault-950"
     };
     let action_btn = if is_dark_mode {
         "flex w-full items-center justify-between border border-white/[0.08] bg-white/[0.02] px-4 py-3 text-left transition hover:bg-white/[0.06] disabled:opacity-50"

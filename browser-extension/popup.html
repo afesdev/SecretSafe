@@ -18,6 +18,29 @@
 
       <button id="connectBtn" type="button">Conectar con PIN</button>
       <button id="searchBtn" type="button">Buscar para este sitio</button>
+      <p class="hint hint-compact">Guardar manualmente en SecretSafe</p>
+      <label>
+        Título
+        <input id="saveTitle" type="text" placeholder="Ej: Cuenta principal" />
+      </label>
+      <label>
+        Usuario / correo
+        <input id="saveUsername" type="text" placeholder="usuario@email.com" />
+      </label>
+      <label>
+        Contraseña
+        <input id="savePassword" type="password" placeholder="Contraseña a guardar" />
+      </label>
+      <label>
+        URL (detectada automáticamente)
+        <input id="saveUrl" type="text" placeholder="https://sitio.com/login" />
+      </label>
+      <label>
+        Carpeta
+        <select id="saveGroup"></select>
+      </label>
+      <button id="detectBtn" type="button">Detectar desde la página</button>
+      <button id="saveBtn" type="button">Guardar en SecretSafe</button>
       <p id="status" class="status"></p>
       <p id="sessionInfo" class="session-info"></p>
       <div id="entries" class="entries"></div>

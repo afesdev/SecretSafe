@@ -19,7 +19,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     saveBridgeSession(bridgeSession, () => {
       sendResponse({ ok: true, expiresAt: bridgeSession.expiresAt });
     });
-    return false;
+    return true;
   }
 
   if (message.type === "bridge-session-status") {
@@ -116,6 +116,84 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
           sendResponse(response || { ok: true });
         }
       );
+    });
+    return true;
+  }
+
+  if (message.type === "collect-active-tab-credentials") {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      const activeTab = tabs[0];
+      if (!activeTab?.id) {
+        sendResponse({ ok: false, error: "No se encontró pestaña activa." });
+        return;
+      }
+      chrome.tabs.sendMessage(activeTab.id, { type: "collect-credentials" }, (response) => {
+        if (chrome.runtime.lastError) {
+          sendResponse({ ok: false, error: chrome.runtime.lastError.message });
+          return;
+        }
+        sendResponse(response || { ok: false, error: "No se pudieron leer credenciales." });
+      });
+    });
+    return true;
+  }
+
+  if (message.type === "bridge-save") {
+    withActiveSession((session) => {
+      if (!session) {
+        sendResponse({ ok: false, error: "Sesión no activa. Abre el popup y autentica." });
+        return;
+      }
+
+      fetch(`${BRIDGE_URL}/vault/save`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          token: session.token,
+          title: message.title || "",
+          username: message.username || "",
+          password: message.password || "",
+          url: message.url || "",
+          notes: message.notes || "",
+          group: message.group || "General"
+        })
+      })
+        .then(async (response) => {
+          const data = await response.json();
+          if (!response.ok) {
+            sendResponse({ ok: false, error: data.error || "No se pudo guardar secreto." });
+            return;
+          }
+          sendResponse({ ok: true, id: data.id || "" });
+        })
+        .catch((error) => sendResponse({ ok: false, error: String(error) }));
+    });
+    return true;
+  }
+
+  if (message.type === "bridge-meta") {
+    withActiveSession((session) => {
+      if (!session) {
+        sendResponse({ ok: false, error: "Sesión no activa. Abre el popup y autentica." });
+        return;
+      }
+      fetch(`${BRIDGE_URL}/vault/meta`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          token: session.token,
+          domain: ""
+        })
+      })
+        .then(async (response) => {
+          const data = await response.json();
+          if (!response.ok) {
+            sendResponse({ ok: false, error: data.error || "No se pudo leer metadata." });
+            return;
+          }
+          sendResponse({ ok: true, groups: data.groups || [] });
+        })
+        .catch((error) => sendResponse({ ok: false, error: String(error) }));
     });
     return true;
   }

@@ -150,32 +150,53 @@ function removeSuggestionBox() {
 }
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  if (message?.type !== "fill-credentials") {
+  if (message?.type === "collect-credentials") {
+    const usernameInput = currentPasswordInput
+      ? findUsernameInputFor(currentPasswordInput) || findUsernameInput()
+      : findUsernameInput();
+    const passwordInput = currentPasswordInput || findPasswordInput();
+    const username = usernameInput?.value?.trim() || "";
+    const password = passwordInput?.value || "";
+    if (!username && !password) {
+      sendResponse({ ok: false, error: "No se detectaron credenciales en esta pagina." });
+      return false;
+    }
+    sendResponse({
+      ok: true,
+      username,
+      password,
+      url: window.location.href || "",
+      title: document.title || window.location.hostname || "Nuevo secreto"
+    });
     return false;
   }
 
-  const usernameInput = findUsernameInput();
-  const passwordInput = findPasswordInput();
+  if (message?.type === "fill-credentials") {
+    const usernameInput = findUsernameInput();
+    const passwordInput = findPasswordInput();
 
-  if (!usernameInput && !passwordInput) {
-    sendResponse({ ok: false, error: "No se detectaron campos para completar." });
+    if (!usernameInput && !passwordInput) {
+      sendResponse({ ok: false, error: "No se detectaron campos para completar." });
+      return false;
+    }
+
+    if (usernameInput) {
+      usernameInput.focus();
+      usernameInput.value = message.username || "";
+      usernameInput.dispatchEvent(new Event("input", { bubbles: true }));
+      usernameInput.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+
+    if (passwordInput) {
+      passwordInput.focus();
+      passwordInput.value = message.password || "";
+      passwordInput.dispatchEvent(new Event("input", { bubbles: true }));
+      passwordInput.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+
+    sendResponse({ ok: true });
     return false;
   }
 
-  if (usernameInput) {
-    usernameInput.focus();
-    usernameInput.value = message.username || "";
-    usernameInput.dispatchEvent(new Event("input", { bubbles: true }));
-    usernameInput.dispatchEvent(new Event("change", { bubbles: true }));
-  }
-
-  if (passwordInput) {
-    passwordInput.focus();
-    passwordInput.value = message.password || "";
-    passwordInput.dispatchEvent(new Event("input", { bubbles: true }));
-    passwordInput.dispatchEvent(new Event("change", { bubbles: true }));
-  }
-
-  sendResponse({ ok: true });
   return false;
 });
